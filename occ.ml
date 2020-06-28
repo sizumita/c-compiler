@@ -6,34 +6,79 @@ let print_first () =
   print_endline ".globl _main"; ()
 
 let p = explode Sys.argv.(1)
-let charlist_to_int lst =
+
+let rec is_integer chr =
+  let i = int_of_char chr in
+  if 48 <= i && i <= 57 
+    then true 
+    else false
+
+type expr =
+  | Symbol of char
+  | NUM of int
+  | EOF
+  | ERROR of string
+
+let int_of_char_list lst =
   int_of_string @@ String.of_seq @@ List.to_seq lst
+
 let rec get_integer_rest lst result =
   match lst with
-  | [] -> (charlist_to_int result, [])
+  | [] -> (int_of_char_list result, [])
   | first :: rest ->
-    if first = '+' || first = '-' 
-      then (charlist_to_int result, first :: rest) 
-      else get_integer_rest rest (result @ [first])
+    if first = ' ' then get_integer_rest rest result else
+    if is_integer first
+      then get_integer_rest rest (result @ [first])
+      else (int_of_char_list result, first :: rest)
+ 
+
+let new_token lst prev =
+  match prev with
+  | Symbol x -> 
+    let value, rest = get_integer_rest lst [] in
+    (NUM value, rest)
+  | _ -> (ERROR "無効なトークンです。", [])
 
 
-let rec loop lst =
+let rec tokenize lst is_first =
   match lst with
-  | [] -> ()
+  | [] -> [EOF]
   | first :: rest ->
-    let value, rest2 = get_integer_rest rest [] in
-      match first with
-      | '-' -> Printf.printf "  sub rax, %d\n" value; loop rest2
-      | '+' -> Printf.printf "  add rax, %d\n" value; loop rest2
-      | _ -> print_endline "予期しない文字です"
+  if first = ' '
+    then tokenize rest is_first
+  else if is_first
+    then let token, rest' = get_integer_rest (first :: rest) [] in
+      (NUM token) :: tokenize rest' false 
+  else if first = '-' || first = '+' 
+    then 
+      let token, rest' = new_token rest (Symbol first) in
+      (Symbol first) :: token :: tokenize rest' false
+  else (ERROR "無効なトークンです。") :: tokenize [] false
 
-let read_first lst =
-  let value, rest = get_integer_rest lst [] in
-  Printf.printf "  mov rax, %d\n" value;
-  rest
+let print_sub i = Printf.printf "  sub rax, %d\n" i
+let print_add i = Printf.printf "  add rax, %d\n" i
+
+let rec read_tokens tokens =
+  match tokens with
+  | (NUM x) :: rest -> Printf.printf "  mov rax, %d\n" x; read_tokens rest
+  | (Symbol '+') :: rest ->
+    let next_token = List.hd rest in (
+      match next_token with
+      | NUM y -> print_add y; read_tokens @@ List.tl rest
+      | _ -> print_endline "無効なトークンです。"
+    )
+  | (Symbol '-') :: rest ->
+    let next_token = List.hd rest in (
+      match next_token with
+      | NUM y -> print_sub y; read_tokens @@ List.tl rest
+      | _ -> print_endline "無効なトークンです。"
+    )
+  | (ERROR x) :: rest -> Printf.printf "ERROR: %s" x
+  | EOF :: rest -> print_endline "  ret"
+  | _ -> ()
+
 
 let () =
   print_first ();
   print_endline "_main:";
-  loop @@ read_first p;
-  print_endline "  ret"
+  read_tokens @@ tokenize p true

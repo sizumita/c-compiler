@@ -1,5 +1,4 @@
 make
-rm tmp.s
-./occ 123 > tmp.s
+./occ "5+20-4"
 make clean
 
