@@ -1,4 +1,4 @@
 make
-./occ "5+20-4"
+./occ
 make clean
 
