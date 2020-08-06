@@ -1,4 +1,4 @@
-SOURCES = occ.ml, codegen.ml, clex.ml
+SOURCES = codegen.ml lex.ml occ.ml
 RESULT = occ
 
 -include OCamlMakefile

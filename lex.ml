@@ -48,7 +48,7 @@ let rec treenize token_list = read_expr token_list []
 
 and read_expr lst lhs =
   match lst with
-  | [] -> Num (-255)
+  | [] -> read_primary lhs
   | first :: rest -> begin 
     match first with
     | Add_t -> Add (read_mul lhs [], read_mul rest [])
@@ -58,8 +58,8 @@ and read_expr lst lhs =
 
 and read_mul lst lhs =
   match lst with
-  | [] -> read_expr lhs []
-  | first :: rest -> begin 
+  | [] -> read_primary lhs
+  | first :: rest -> begin
     match first with
     | Mul_t -> Div (read_primary lhs, read_primary rest)
     | Div_t -> Div (read_primary lhs, read_primary rest)
@@ -70,8 +70,8 @@ and read_primary lst =
   | LP :: tl -> begin 
     match List.rev tl with
       | RP :: rest -> read_expr (List.rev rest) []
-      | _ -> Num (-255)(* エラー *)
+      | _ -> Num (-256)(* エラー *)
   end
   | [Num_t x] -> Num x
-  | _ -> Num (-255) (* エラー *)
+  | _ -> read_expr lst []
 
